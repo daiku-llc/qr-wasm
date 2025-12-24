@@ -102,3 +102,76 @@ async fn generate_qr(data: &str, format: &str) -> Result<Response> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use qrcode::QrCode;
+
+    #[test]
+    fn test_qr_code_generation_basic() {
+        let data = "https://example.com";
+        let code = QrCode::new(data.as_bytes());
+        assert!(code.is_ok());
+    }
+
+    #[test]
+    fn test_qr_code_generation_empty_string() {
+        let data = "";
+        let code = QrCode::new(data.as_bytes());
+        // Empty string should still generate a valid QR code
+        assert!(code.is_ok());
+    }
+
+    #[test]
+    fn test_qr_code_generation_long_string() {
+        let data = "a".repeat(1000);
+        let code = QrCode::new(data.as_bytes());
+        assert!(code.is_ok());
+    }
+
+    #[test]
+    fn test_qr_code_svg_rendering() {
+        let data = "test";
+        let code = QrCode::new(data.as_bytes()).unwrap();
+        let svg_string = code
+            .render::<svg::Color>()
+            .min_dimensions(300, 300)
+            .dark_color(svg::Color("#000000"))
+            .light_color(svg::Color("#ffffff"))
+            .build();
+        
+        // SVG output should contain SVG elements (may have whitespace before <svg>)
+        assert!(svg_string.trim().starts_with("<svg") || svg_string.contains("<svg"));
+        assert!(svg_string.contains("xmlns") || svg_string.contains("svg"));
+        assert!(!svg_string.is_empty());
+    }
+
+    #[test]
+    fn test_qr_code_png_rendering() {
+        let data = "test";
+        let code = QrCode::new(data.as_bytes()).unwrap();
+        let img = code.render::<Luma<u8>>()
+            .min_dimensions(400, 400)
+            .build();
+        
+        assert!(img.width() >= 400);
+        assert!(img.height() >= 400);
+    }
+
+    #[test]
+    fn test_special_characters() {
+        let test_cases = vec![
+            "Hello, World!",
+            "测试",
+            "🚀 QR Code",
+            "https://example.com?q=test&lang=en",
+            "Line 1\nLine 2",
+        ];
+
+        for data in test_cases {
+            let code = QrCode::new(data.as_bytes());
+            assert!(code.is_ok(), "Failed to generate QR code for: {}", data);
+        }
+    }
+}
+

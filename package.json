@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "cargo build --release"
+    "build": "cargo build --release",
+    "test": "cargo test",
+    "test:unit": "cargo test --lib",
+    "test:api": "bash tests/api_tests.sh",
+    "test:all": "npm run test:unit && npm run test:api"
   },
   "keywords": [
     "qr-code",
