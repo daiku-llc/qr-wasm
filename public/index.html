@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator - WASM on Cloudflare Workers</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ QR Code Generator</h1>
+            <p class="subtitle">Powered by WebAssembly on Cloudflare Workers Edge</p>
+        </header>
+
+        <main>
+            <div class="form-card">
+                <label for="qr-input">Enter text or URL:</label>
+                <textarea 
+                    id="qr-input" 
+                    placeholder="https://example.com or any text..."
+                    rows="3"
+                ></textarea>
+
+                <div class="format-selector">
+                    <label>
+                        <input type="radio" name="format" value="svg" checked>
+                        SVG (smaller, scalable)
+                    </label>
+                    <label>
+                        <input type="radio" name="format" value="png">
+                        PNG (base64)
+                    </label>
+                </div>
+
+                <button id="generate-btn" class="btn-primary">Generate QR Code</button>
+                
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Generating with WASM...</span>
+                </div>
+            </div>
+
+            <div id="result-card" class="result-card hidden">
+                <h2>Your QR Code</h2>
+                <div id="qr-output"></div>
+                <div id="qr-info" class="info"></div>
+                <button id="download-btn" class="btn-secondary">Download</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with Rust 🦀 • Compiled to WebAssembly • Running on Cloudflare Edge</p>
+        </footer>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
+

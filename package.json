@@ -1,0 +1,24 @@
+{
+  "name": "qr-wasm",
+  "version": "0.1.0",
+  "description": "QR Code Generator powered by Rust/WASM on Cloudflare Workers Edge",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "cargo build --release"
+  },
+  "keywords": [
+    "qr-code",
+    "wasm",
+    "cloudflare-workers",
+    "rust",
+    "edge-computing"
+  ],
+  "author": "daiku-llc",
+  "license": "ISC",
+  "devDependencies": {
+    "wrangler": "^4.56.0"
+  }
+}
+

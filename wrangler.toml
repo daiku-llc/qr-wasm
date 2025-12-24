@@ -1,0 +1,19 @@
+#:schema node_modules/wrangler/config-schema.json
+
+name = "qr-wasm"
+main = "build/worker/shim.mjs"
+compatibility_date = "2025-12-24"
+
+# Static assets configuration
+[assets]
+directory = "./public"
+
+# Build configuration
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+# Optional: Add custom domain when ready
+# routes = [
+#   { pattern = "qr.yourdomain.com", custom_domain = true }
+# ]
+
