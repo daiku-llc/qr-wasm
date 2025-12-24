@@ -62,6 +62,50 @@ This will:
 1. Run all unit tests
 2. Run API integration tests (requires running worker)
 
+## Test Reports
+
+### Generate Coverage Reports
+
+**HTML Coverage Report:**
+```bash
+npm run test:coverage
+```
+Opens `test-reports/tarpaulin-report.html` in your browser showing:
+- Line-by-line code coverage
+- File coverage percentages
+- Overall project coverage statistics
+
+**XML Coverage Report (for CI/CD):**
+```bash
+npm run test:coverage:xml
+```
+Generates `test-reports/cobertura.xml` for CI/CD integration.
+
+### Generate JUnit XML Reports
+
+**Rust Unit Tests:**
+```bash
+npm run test:junit
+```
+Generates `test-reports/junit.xml` with test results.
+
+**API Integration Tests:**
+```bash
+npm run test:api:junit
+```
+Generates `test-reports/api-tests-junit.xml` with API test results.
+
+**All Reports:**
+```bash
+npm run test:reports
+```
+Generates both coverage and JUnit reports.
+
+### Viewing Reports
+
+- **HTML Coverage**: Open `test-reports/tarpaulin-report.html` in your browser
+- **JUnit XML**: Can be consumed by CI/CD systems, test viewers, or code quality tools
+
 ## Test Coverage
 
 - ✅ QR code generation for various inputs

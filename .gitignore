@@ -38,3 +38,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Test reports
+test-reports/
+coverage/
+*.xml
+*.html
+tarpaulin-report.html

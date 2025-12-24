@@ -10,7 +10,12 @@
     "test": "cargo test",
     "test:unit": "cargo test --lib",
     "test:api": "bash tests/api_tests.sh",
-    "test:all": "npm run test:unit && npm run test:api"
+    "test:all": "npm run test:unit && npm run test:api",
+    "test:coverage": "mkdir -p test-reports && cargo tarpaulin --out Html --output-dir test-reports",
+    "test:coverage:xml": "mkdir -p test-reports && cargo tarpaulin --out Xml --output-dir test-reports",
+    "test:junit": "bash tests/generate_junit.sh",
+    "test:reports": "npm run test:coverage && npm run test:api:junit",
+    "test:api:junit": "bash tests/api_tests.sh --junit"
   },
   "keywords": [
     "qr-code",
