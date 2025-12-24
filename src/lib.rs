@@ -1,7 +1,7 @@
 use worker::*;
 use qrcode::QrCode;
 use qrcode::render::svg;
-use image::Luma;
+use image::{Luma, ImageEncoder};
 use base64::{Engine as _, engine::general_purpose};
 
 #[event(fetch)]
@@ -69,12 +69,10 @@ async fn generate_qr(data: &str, format: &str) -> Result<Response> {
                 .light_color(svg::Color("#ffffff"))
                 .build();
             
-            Response::ok(svg_string).map(|r| {
-                let mut headers = Headers::new();
-                headers.set("Content-Type", "image/svg+xml")?;
-                headers.set("Cache-Control", "public, max-age=3600")?;
-                r.with_headers(headers)
-            })?
+            let mut headers = Headers::new();
+            headers.set("Content-Type", "image/svg+xml")?;
+            headers.set("Cache-Control", "public, max-age=3600")?;
+            Ok(Response::ok(svg_string)?.with_headers(headers))
         },
         
         "png" => {
