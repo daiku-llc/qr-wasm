@@ -69,7 +69,7 @@ async fn generate_qr(data: &str, format: &str) -> Result<Response> {
                 .light_color(svg::Color("#ffffff"))
                 .build();
             
-            let mut headers = Headers::new();
+            let headers = Headers::new();
             headers.set("Content-Type", "image/svg+xml")?;
             headers.set("Cache-Control", "public, max-age=3600")?;
             Ok(Response::ok(svg_string)?.with_headers(headers))
