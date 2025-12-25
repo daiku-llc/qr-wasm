@@ -4,13 +4,65 @@ use qrcode::render::svg;
 use image::{Luma, ImageEncoder};
 use base64::{Engine as _, engine::general_purpose};
 
+// Validate that request comes from the app (same origin or allowed origin)
+fn validate_origin(req: &Request, env: &Env) -> Result<()> {
+    let url = req.url()?;
+    let request_host = url.host_str().unwrap_or("");
+    let request_scheme = url.scheme();
+    
+    // Check for API key in environment (optional, set ALLOWED_API_KEY in Cloudflare dashboard)
+    if let Ok(api_key) = env.secret("ALLOWED_API_KEY") {
+        if let Ok(Some(auth_header)) = req.headers().get("X-API-Key") {
+            if auth_header.to_string() == api_key.to_string() {
+                return Ok(()); // Valid API key, allow request
+            }
+        }
+    }
+    
+    // Get Origin header (for cross-origin requests)
+    let origin_header = req.headers().get("Origin")?;
+    // Get Referer header (for same-origin requests)
+    let referer_header = req.headers().get("Referer")?;
+    
+    // Check if request is from same origin
+    let expected_origin = format!("{}://{}", request_scheme, request_host);
+    
+    // If Origin header is present, it must match the request host
+    if let Some(ref origin) = origin_header {
+        let origin_str = origin.to_string();
+        if origin_str == expected_origin || origin_str.contains(request_host) {
+            return Ok(()); // Same origin, allow
+        }
+    }
+    
+    // Check Referer header
+    if let Some(ref referer) = referer_header {
+        let referer_str = referer.to_string();
+        if referer_str.contains(request_host) {
+            return Ok(()); // Referer matches, allow
+        }
+    }
+    
+    // If neither Origin nor Referer is present, check if it's a direct API call
+    // Block direct API calls (no Origin/Referer) unless they have API key
+    if origin_header.is_none() && referer_header.is_none() {
+        return Err(Error::RustError("Unauthorized: Direct API calls not allowed. Request must come from the app.".to_string()));
+    }
+    
+    // Origin/Referer doesn't match, block request
+    Err(Error::RustError("Unauthorized: Request must come from the app".to_string()))
+}
+
 #[event(fetch)]
 async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     console_error_panic_hook::set_once();
     
     Router::new()
         // API endpoint for QR generation
-        .post_async("/api/generate", |mut req, _ctx| async move {
+        .post_async("/api/generate", |mut req, ctx| async move {
+            // Validate origin before processing
+            validate_origin(&req, &ctx.env)?;
+            
             let body: serde_json::Value = req.json().await?;
             
             let data = body["data"]
@@ -25,7 +77,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         })
         
         // GET endpoint for URL-based generation
-        .get_async("/api/qr", |req, _ctx| async move {
+        .get_async("/api/qr", |req, ctx| async move {
+            // Validate origin before processing
+            validate_origin(&req, &ctx.env)?;
+            
             let url = req.url()?;
             let query: std::collections::HashMap<String, String> = url
                 .query_pairs()
