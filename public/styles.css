@@ -81,6 +81,32 @@ textarea:focus {
     border-color: var(--primary);
 }
 
+.capacity-info {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+}
+
+.capacity-status {
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.capacity-status.within-limit {
+    color: var(--success);
+}
+
+.capacity-status.near-limit {
+    color: #f59e0b;
+}
+
+.capacity-status.over-limit {
+    color: #ef4444;
+}
+
 .format-selector {
     display: flex;
     gap: 1.5rem;

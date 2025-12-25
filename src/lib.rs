@@ -30,20 +30,32 @@ fn validate_origin(req: &Request, env: &Env) -> Result<()> {
     // If Origin header is present, it must match the request host
     if let Some(ref origin) = origin_header {
         let origin_str = origin.to_string();
-        if origin_str == expected_origin || origin_str.contains(request_host) {
-            return Ok(()); // Same origin, allow
+        // Allow same origin or localhost (for dev)
+        if origin_str == expected_origin 
+            || origin_str.contains(request_host)
+            || origin_str.contains("localhost")
+            || origin_str.contains("127.0.0.1") {
+            return Ok(()); // Same origin or localhost, allow
         }
     }
     
     // Check Referer header
     if let Some(ref referer) = referer_header {
         let referer_str = referer.to_string();
-        if referer_str.contains(request_host) {
+        // Allow if referer matches host or is localhost (for dev)
+        if referer_str.contains(request_host) 
+            || referer_str.contains("localhost")
+            || referer_str.contains("127.0.0.1") {
             return Ok(()); // Referer matches, allow
         }
     }
     
     // If neither Origin nor Referer is present, check if it's a direct API call
+    // In dev mode (localhost), allow requests without Origin/Referer
+    if request_host.contains("localhost") || request_host.contains("127.0.0.1") {
+        return Ok(()); // Allow localhost requests in dev mode
+    }
+    
     // Block direct API calls (no Origin/Referer) unless they have API key
     if origin_header.is_none() && referer_header.is_none() {
         return Err(Error::RustError("Unauthorized: Direct API calls not allowed. Request must come from the app.".to_string()));
@@ -97,6 +109,19 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             generate_qr(data, format).await
         })
         
+        // Capacity check endpoint (no origin validation needed - just checking)
+        .post_async("/api/check-capacity", |mut req, _ctx| async move {
+            let body: serde_json::Value = req.json().await?;
+            
+            let data = body["data"]
+                .as_str()
+                .ok_or("Missing 'data' field")?;
+            
+            let (_is_valid, capacity_info) = check_qr_capacity(data);
+            
+            Response::from_json(&capacity_info)
+        })
+        
         // Health check
         .get("/api/health", |_, _| {
             Response::from_json(&serde_json::json!({
@@ -110,10 +135,124 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .await
 }
 
+// Check QR code capacity before generation
+// Actually attempts to create the QR code to verify it will work
+// Returns (is_valid, capacity_info) where capacity_info includes:
+// - byte_count: actual bytes used
+// - max_capacity: maximum bytes for QR code (version 40, error correction L)
+// - characters: character count
+// - is_within_limit: whether it fits (VERIFIED by actually creating QR code)
+fn check_qr_capacity(data: &str) -> (bool, serde_json::Value) {
+    // QR Code Version 40 (maximum) with Error Correction Level L (lowest) = 2,953 bytes max
+    // This is the theoretical maximum, but we'll verify by actually trying to create it
+    const MAX_CAPACITY_BYTES: usize = 2953;
+    
+    let byte_count = data.as_bytes().len();
+    let char_count = data.chars().count();
+    
+    // Actually try to create the QR code to verify it will work
+    // This is the most reliable way to check capacity
+    let qr_result = QrCode::new(data.as_bytes());
+    let is_within_limit = qr_result.is_ok();
+    
+    // Calculate capacity info based on actual test result
+    // Keep calculations simple and consistent to avoid weird jumps
+    let (actual_max_capacity, bytes_over, bytes_remaining) = if !is_within_limit {
+        // Generation failed - we're definitely over
+        // To find how much over, we need to find the actual limit
+        // Do a quick binary search (limited iterations for performance)
+        let mut low = 0;
+        let mut high = byte_count.min(MAX_CAPACITY_BYTES);
+        let mut found_limit = 0;
+        
+        // Binary search with limited iterations (max 15 for performance)
+        for _ in 0..15 {
+            if low >= high {
+                break;
+            }
+            let mid = (low + high + 1) / 2;
+            let test_bytes: Vec<u8> = data.as_bytes().iter().take(mid).cloned().collect();
+            
+            if QrCode::new(&test_bytes).is_ok() {
+                found_limit = mid;
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+        
+        // If we found a limit, use it; otherwise use conservative estimate
+        let limit = if found_limit > 0 {
+            found_limit
+        } else {
+            // Fallback: estimate limit is 90% of current (conservative)
+            (byte_count * 9 / 10).max(1)
+        };
+        
+        let over = byte_count.saturating_sub(limit);
+        (limit, over, 0)
+    } else {
+        // Generation succeeded - find approximate max by testing larger sizes
+        let mut test_size = byte_count;
+        let mut found_limit = byte_count;
+        
+        // Test in larger increments first, then smaller (for performance)
+        let increments = [200, 100, 50, 25, 10, 5, 1];
+        for &inc in &increments {
+            while test_size + inc <= MAX_CAPACITY_BYTES && test_size < byte_count + 1000 {
+                test_size += inc;
+                let test_bytes: Vec<u8> = data.as_bytes().iter()
+                    .cycle()
+                    .take(test_size)
+                    .cloned()
+                    .collect();
+                
+                if QrCode::new(&test_bytes).is_ok() {
+                    found_limit = test_size;
+                } else {
+                    break;
+                }
+            }
+        }
+        
+        let remaining = found_limit.saturating_sub(byte_count);
+        (found_limit, 0, remaining)
+    };
+    
+    // Calculate percentage based on the actual limit we found
+    let percentage_used = if actual_max_capacity > 0 {
+        ((byte_count as f64 / actual_max_capacity as f64) * 100.0).round() as u32
+    } else {
+        100
+    };
+    
+    let capacity_info = serde_json::json!({
+        "byte_count": byte_count,
+        "char_count": char_count,
+        "max_capacity_bytes": actual_max_capacity,  // Use actual tested limit
+        "theoretical_max": MAX_CAPACITY_BYTES,     // Keep theoretical for reference
+        "is_within_limit": is_within_limit,
+        "bytes_over": bytes_over,
+        "bytes_remaining": bytes_remaining,
+        "percentage_used": percentage_used,
+        "verified": true  // Indicates we actually tested QR code creation
+    });
+    
+    (is_within_limit, capacity_info)
+}
+
 async fn generate_qr(data: &str, format: &str) -> Result<Response> {
-    // Generate QR code
+    // Generate QR code - the capacity check already verified this will work
+    // But we check again here as a safety measure
     let code = QrCode::new(data.as_bytes())
-        .map_err(|e| Error::RustError(format!("QR generation failed: {}", e)))?;
+        .map_err(|e| {
+            // If generation fails, provide helpful error message
+            let byte_count = data.as_bytes().len();
+            Error::RustError(format!(
+                "QR generation failed: {}. Data size: {} bytes. Please reduce the data size.",
+                e, byte_count
+            ))
+        })?;
     
     match format {
         "svg" => {
