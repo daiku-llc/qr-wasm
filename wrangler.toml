@@ -10,7 +10,7 @@ directory = "./public"
 
 # Build configuration
 [build]
-command = "cargo install -q worker-build && worker-build --release"
+command = "bash build.sh"
 
 # Optional: Add custom domain when ready
 # routes = [
