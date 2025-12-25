@@ -1,6 +1,5 @@
 use worker::*;
 use qrcode::QrCode;
-use qrcode::render::svg;
 use image::{Luma, ImageEncoder};
 use base64::{Engine as _, engine::general_purpose};
 
@@ -81,11 +80,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 .as_str()
                 .ok_or("Missing 'data' field")?;
             
-            let format = body["format"]
-                .as_str()
-                .unwrap_or("svg");
-            
-            generate_qr(data, format).await
+            // Only PNG format supported
+            generate_qr(data).await
         })
         
         // GET endpoint for URL-based generation
@@ -102,11 +98,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let data = query.get("data")
                 .ok_or("Missing 'data' query parameter")?;
             
-            let format = query.get("format")
-                .map(|s| s.as_str())
-                .unwrap_or("svg");
-            
-            generate_qr(data, format).await
+            // Only PNG format supported
+            generate_qr(data).await
         })
         
         // Capacity check endpoint (no origin validation needed - just checking)
@@ -241,7 +234,7 @@ fn check_qr_capacity(data: &str) -> (bool, serde_json::Value) {
     (is_within_limit, capacity_info)
 }
 
-async fn generate_qr(data: &str, format: &str) -> Result<Response> {
+async fn generate_qr(data: &str) -> Result<Response> {
     // Generate QR code - the capacity check already verified this will work
     // But we check again here as a safety measure
     let code = QrCode::new(data.as_bytes())
@@ -254,46 +247,27 @@ async fn generate_qr(data: &str, format: &str) -> Result<Response> {
             ))
         })?;
     
-    match format {
-        "svg" => {
-            let svg_string = code
-                .render::<svg::Color>()
-                .min_dimensions(300, 300)
-                .dark_color(svg::Color("#000000"))
-                .light_color(svg::Color("#ffffff"))
-                .build();
-            
-            let headers = Headers::new();
-            headers.set("Content-Type", "image/svg+xml")?;
-            headers.set("Cache-Control", "public, max-age=3600")?;
-            Ok(Response::ok(svg_string)?.with_headers(headers))
-        },
-        
-        "png" => {
-            let img = code.render::<Luma<u8>>()
-                .min_dimensions(400, 400)
-                .build();
-            
-            let mut png_bytes = Vec::new();
-            let encoder = image::codecs::png::PngEncoder::new(&mut png_bytes);
-            encoder.write_image(
-                img.as_raw(),
-                img.width(),
-                img.height(),
-                image::ExtendedColorType::L8,
-            ).map_err(|e| Error::RustError(format!("PNG encoding failed: {}", e)))?;
-            
-            let base64_png = general_purpose::STANDARD.encode(&png_bytes);
-            
-            Response::from_json(&serde_json::json!({
-                "format": "png",
-                "data_url": format!("data:image/png;base64,{}", base64_png),
-                "size_bytes": png_bytes.len(),
-            }))
-        },
-        
-        _ => Response::error("Invalid format. Use 'svg' or 'png'", 400)
-    }
+    // Generate PNG format
+    let img = code.render::<Luma<u8>>()
+        .min_dimensions(400, 400)
+        .build();
+    
+    let mut png_bytes = Vec::new();
+    let encoder = image::codecs::png::PngEncoder::new(&mut png_bytes);
+    encoder.write_image(
+        img.as_raw(),
+        img.width(),
+        img.height(),
+        image::ExtendedColorType::L8,
+    ).map_err(|e| Error::RustError(format!("PNG encoding failed: {}", e)))?;
+    
+    let base64_png = general_purpose::STANDARD.encode(&png_bytes);
+    
+    Response::from_json(&serde_json::json!({
+        "format": "png",
+        "data_url": format!("data:image/png;base64,{}", base64_png),
+        "size_bytes": png_bytes.len(),
+    }))
 }
 
 #[cfg(test)]
@@ -321,23 +295,6 @@ mod tests {
         let data = "a".repeat(1000);
         let code = QrCode::new(data.as_bytes());
         assert!(code.is_ok());
-    }
-
-    #[test]
-    fn test_qr_code_svg_rendering() {
-        let data = "test";
-        let code = QrCode::new(data.as_bytes()).unwrap();
-        let svg_string = code
-            .render::<svg::Color>()
-            .min_dimensions(300, 300)
-            .dark_color(svg::Color("#000000"))
-            .light_color(svg::Color("#ffffff"))
-            .build();
-        
-        // SVG output should contain SVG elements (may have whitespace before <svg>)
-        assert!(svg_string.trim().starts_with("<svg") || svg_string.contains("<svg"));
-        assert!(svg_string.contains("xmlns") || svg_string.contains("svg"));
-        assert!(!svg_string.is_empty());
     }
 
     #[test]

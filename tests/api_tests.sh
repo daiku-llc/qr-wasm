@@ -86,27 +86,16 @@ fi
 # Test health endpoint
 test_endpoint "Health check" "GET" "$BASE_URL/api/health"
 
-# Test POST /api/generate with SVG
-test_endpoint "POST generate SVG" "POST" "$BASE_URL/api/generate" \
-    '{"data":"https://example.com","format":"svg"}'
-
 # Test POST /api/generate with PNG
 test_endpoint "POST generate PNG" "POST" "$BASE_URL/api/generate" \
-    '{"data":"https://example.com","format":"png"}'
-
-# Test GET /api/qr with SVG
-test_endpoint "GET QR SVG" "GET" "$BASE_URL/api/qr?data=test123&format=svg"
+    '{"data":"https://example.com"}'
 
 # Test GET /api/qr with PNG
-test_endpoint "GET QR PNG" "GET" "$BASE_URL/api/qr?data=test123&format=png"
+test_endpoint "GET QR PNG" "GET" "$BASE_URL/api/qr?data=test123"
 
 # Test error handling - missing data
 test_endpoint "Missing data field" "POST" "$BASE_URL/api/generate" \
-    '{"format":"svg"}' 400
-
-# Test error handling - invalid format
-test_endpoint "Invalid format" "POST" "$BASE_URL/api/generate" \
-    '{"data":"test","format":"invalid"}' 400
+    '{}' 400
 
 # Test error handling - missing query param
 test_endpoint "Missing query param" "GET" "$BASE_URL/api/qr" 400

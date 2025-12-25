@@ -7,7 +7,7 @@ A high-performance QR code generator powered by Rust/WebAssembly running on Clou
 - 🚀 **Edge Computing**: Runs on Cloudflare's global edge network for ultra-low latency
 - 🦀 **Rust/WASM**: Compiled from Rust to WebAssembly for maximum performance
 - 🎨 **Modern UI**: Beautiful dark-themed interface with responsive design
-- 📦 **Dual Formats**: Generate QR codes as SVG (scalable) or PNG (raster)
+- 📦 **PNG Format**: Generate QR codes as PNG images
 - ⚡ **Fast**: Sub-100ms generation times on edge infrastructure
 - 🔒 **Privacy-First**: All processing happens server-side with no data storage
 
@@ -66,18 +66,11 @@ Generate a QR code from JSON payload.
 **Request:**
 ```json
 {
-  "data": "https://example.com",
-  "format": "svg"
+  "data": "https://example.com"
 }
 ```
 
-**Response (SVG):**
-```
-Content-Type: image/svg+xml
-<svg>...</svg>
-```
-
-**Response (PNG):**
+**Response:**
 ```json
 {
   "format": "png",
@@ -92,7 +85,7 @@ Generate a QR code from query parameters.
 
 **Example:**
 ```
-GET /api/qr?data=https://example.com&format=svg
+GET /api/qr?data=https://example.com
 ```
 
 ### GET `/api/health`
@@ -135,7 +128,6 @@ Edit `wrangler.toml` to customize:
 ## Performance
 
 - **Generation Time**: < 100ms on edge
-- **SVG Size**: ~2-5 KB
 - **PNG Size**: ~5-15 KB (depending on content)
 - **Global Latency**: < 50ms (Cloudflare edge)
 

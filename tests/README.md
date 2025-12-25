@@ -11,7 +11,6 @@ Located in `src/lib.rs`, these test the core QR code generation logic:
 - **Basic QR generation**: Tests that QR codes can be generated from various inputs
 - **Empty string handling**: Verifies empty strings are handled correctly
 - **Long string handling**: Tests with very long input strings
-- **SVG rendering**: Validates SVG output format
 - **PNG rendering**: Validates PNG image generation
 - **Special characters**: Tests Unicode, emojis, URLs with query params, and newlines
 
@@ -27,7 +26,6 @@ npm run test:unit
 Located in `tests/api_tests.sh`, these test the HTTP API endpoints:
 
 - Health check endpoint
-- POST `/api/generate` with SVG format
 - POST `/api/generate` with PNG format
 - GET `/api/qr` with query parameters
 - Error handling (missing data, invalid format, etc.)
@@ -109,7 +107,6 @@ Generates both coverage and JUnit reports.
 ## Test Coverage
 
 - ✅ QR code generation for various inputs
-- ✅ SVG format output
 - ✅ PNG format output
 - ✅ Error handling
 - ✅ Special characters and Unicode

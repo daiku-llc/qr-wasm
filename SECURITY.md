@@ -25,7 +25,7 @@ For programmatic access, you can set an API key:
    curl -X POST https://your-worker.workers.dev/api/generate \
      -H "Content-Type: application/json" \
      -H "X-API-Key: your-api-key-here" \
-     -d '{"data":"test","format":"svg"}'
+     -d '{"data":"test"}'
    ```
 
 ## How It Works
@@ -84,7 +84,7 @@ Set these in Cloudflare Dashboard → Workers & Pages → Your Worker → Settin
 fetch('/api/generate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ data: 'test', format: 'svg' })
+  body: JSON.stringify({ data: 'test' })
 })
 ```
 
@@ -92,7 +92,7 @@ fetch('/api/generate', {
 ```bash
 curl -X POST https://your-worker.workers.dev/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"data":"test","format":"svg"}'
+  -d '{"data":"test"}'
 # Expected: 401 Unauthorized error
 ```
 
@@ -101,7 +101,7 @@ curl -X POST https://your-worker.workers.dev/api/generate \
 curl -X POST https://your-worker.workers.dev/api/generate \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
-  -d '{"data":"test","format":"svg"}'
+  -d '{"data":"test"}'
 ```
 
 ## Security Notes
